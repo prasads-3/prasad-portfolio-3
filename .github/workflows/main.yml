@@ -7,7 +7,6 @@ on:
       - master
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
@@ -27,13 +26,33 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Locate Project Root & Setup Environment
+        id: locate
+        run: |
+          echo "=== Listing Repository Root ==="
+          ls -la
+          
+          # Find directory containing package.json
+          PKG_PATH=$(find . -name "package.json" -not -path "*/node_modules/*" | head -n 1)
+          
+          if [ -z "$PKG_PATH" ]; then
+            echo "ERROR: package.json could not be found anywhere in the repository!"
+            exit 1
+          fi
+          
+          TARGET_DIR=$(dirname "$PKG_PATH")
+          echo "Found package.json in directory: $TARGET_DIR"
+          echo "workdir=$TARGET_DIR" >> $GITHUB_OUTPUT
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
       - name: Install Dependencies
+        working-directory: ${{ steps.locate.outputs.workdir }}
         run: |
+          echo "Current directory: $(pwd)"
           if [ -f package-lock.json ]; then
             npm ci --legacy-peer-deps || npm install --legacy-peer-deps
           else
@@ -41,6 +60,7 @@ jobs:
           fi
 
       - name: Build Production Project
+        working-directory: ${{ steps.locate.outputs.workdir }}
         run: npm run build
 
       - name: Setup GitHub Pages
@@ -49,7 +69,7 @@ jobs:
       - name: Upload Build Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          path: '${{ steps.locate.outputs.workdir }}/dist'
 
       - name: Deploy to GitHub Pages
         id: deployment
