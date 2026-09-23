@@ -26,22 +26,17 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Locate Project Root & Setup Environment
+      - name: Locate Project Root
         id: locate
         run: |
-          echo "=== Listing Repository Root ==="
-          ls -la
-          
-          # Find directory containing package.json
+          echo "=== Locating Project Root ==="
           PKG_PATH=$(find . -name "package.json" -not -path "*/node_modules/*" | head -n 1)
-          
           if [ -z "$PKG_PATH" ]; then
-            echo "ERROR: package.json could not be found anywhere in the repository!"
+            echo "ERROR: package.json could not be found!"
             exit 1
           fi
-          
           TARGET_DIR=$(dirname "$PKG_PATH")
-          echo "Found package.json in directory: $TARGET_DIR"
+          echo "Project directory: $TARGET_DIR"
           echo "workdir=$TARGET_DIR" >> $GITHUB_OUTPUT
 
       - name: Setup Node.js
@@ -52,7 +47,6 @@ jobs:
       - name: Install Dependencies
         working-directory: ${{ steps.locate.outputs.workdir }}
         run: |
-          echo "Current directory: $(pwd)"
           if [ -f package-lock.json ]; then
             npm ci --legacy-peer-deps || npm install --legacy-peer-deps
           else
@@ -63,8 +57,10 @@ jobs:
         working-directory: ${{ steps.locate.outputs.workdir }}
         run: npm run build
 
-      - name: Setup GitHub Pages
+      - name: Setup GitHub Pages (Auto-Enable if not configured)
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Upload Build Artifact
         uses: actions/upload-pages-artifact@v3
