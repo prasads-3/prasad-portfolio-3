@@ -7,7 +7,7 @@ on:
       - master
   workflow_dispatch:
 
-# Permissions for GitHub Pages deployment
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
@@ -30,11 +30,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 22
 
       - name: Install Dependencies
-        run: npm ci || npm install
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+          else
+            npm install --legacy-peer-deps
+          fi
 
       - name: Build Production Project
         run: npm run build
